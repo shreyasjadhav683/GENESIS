@@ -230,7 +230,6 @@ def request_otp(
     session: Session = Depends(get_session),
     email: str = Body(..., embed=True),
     purpose: str = Body(..., embed=True), # register, reset, change_password
-    background_tasks: BackgroundTasks,
 ) -> Any:
     user_statement = select(User).where(User.email == email)
     user = session.exec(user_statement).first()
@@ -263,8 +262,15 @@ def request_otp(
     session.add(db_otp)
     session.commit()
     
-    # Send Email in Background
-    background_tasks.add_task(send_otp_email, email, code, purpose)
+    # Send email — run synchronously so we can catch errors and report them
+    try:
+        send_otp_email(email, code, purpose)
+    except Exception as e:
+        print(f"[OTP] Email delivery failed for {email}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"OTP generated but email delivery failed: {str(e)}. Check server SMTP configuration."
+        )
     
     return {"message": "OTP sent to email"}
 

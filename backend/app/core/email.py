@@ -11,42 +11,64 @@ def send_email(
 ) -> None:
     """
     Send an email using the configured SMTP server.
+    Raises an exception on failure so callers can handle it properly.
     """
-    if not settings.SMTP_SERVER or not settings.SMTP_USER:
-        print(f"Skipping email to {email_to} (SMTP not configured)")
-        return
+    if not settings.SMTP_SERVER or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        missing = []
+        if not settings.SMTP_SERVER: missing.append("SMTP_SERVER")
+        if not settings.SMTP_USER: missing.append("SMTP_USER")
+        if not settings.SMTP_PASSWORD: missing.append("SMTP_PASSWORD")
+        error_msg = f"SMTP not configured. Missing env vars: {', '.join(missing)}"
+        print(f"[Email] ERROR: {error_msg}")
+        raise RuntimeError(error_msg)
+
+    from_email = settings.from_email  # Uses SMTP_USER as default (required for Gmail)
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
+    msg["From"] = f"{settings.EMAILS_FROM_NAME} <{from_email}>"
     msg["To"] = email_to
 
     part = MIMEText(html_content, "html")
     msg.attach(part)
 
+    print(f"[Email] Attempting to send '{subject}' to {email_to} via {settings.SMTP_SERVER}:{settings.SMTP_PORT} as {from_email}")
     try:
-        server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT)
+        server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15)
+        server.ehlo()
         server.starttls()
+        server.ehlo()
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(settings.EMAILS_FROM_EMAIL, email_to, msg.as_string())
+        server.sendmail(from_email, email_to, msg.as_string())
         server.quit()
-        print(f"Email sent to {email_to}")
+        print(f"[Email] ✓ Successfully sent to {email_to}")
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"[Email] ✗ Authentication failed: {e} — Check SMTP_USER and SMTP_PASSWORD (use App Password for Gmail)")
+        raise
+    except smtplib.SMTPException as e:
+        print(f"[Email] ✗ SMTP error: {e}")
+        raise
     except Exception as e:
-        print(f"Failed to send email: {e}")
-        # In production, we might want to raise or log more severely
-        # raise e
+        print(f"[Email] ✗ Unexpected error: {type(e).__name__}: {e}")
+        raise
 
 def send_otp_email(email_to: str, otp: str, purpose: str) -> None:
     subject = f"Genesis security code for {purpose}"
     html_content = f"""
     <html>
-        <body>
-            <h2>Genesis Security Alert</h2>
-            <p>You requested a security code for: <b>{purpose}</b></p>
-            <p>Your One-Time Password (OTP) is:</p>
-            <h1 style="color: #4ade80; font-family: monospace; letter-spacing: 5px;">{otp}</h1>
-            <p>This code will expire in 10 minutes.</p>
-            <p>If you did not request this, please ignore this email.</p>
+        <body style="font-family: Arial, sans-serif; background: #0f172a; color: #e2e8f0; padding: 30px;">
+            <div style="max-width: 500px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 30px; border: 1px solid #334155;">
+                <h2 style="color: #4ade80; margin-top: 0;">🛡️ Genesis Security Code</h2>
+                <p>You requested a security code for: <b style="color: #94a3b8;">{purpose.replace("_", " ").title()}</b></p>
+                <p>Your One-Time Password (OTP) is:</p>
+                <div style="background: #0f172a; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+                    <h1 style="color: #4ade80; font-family: monospace; letter-spacing: 10px; font-size: 36px; margin: 0;">{otp}</h1>
+                </div>
+                <p style="color: #64748b;">⏱️ This code expires in <b>10 minutes</b>.</p>
+                <p style="color: #64748b;">If you did not request this, please ignore this email.</p>
+                <hr style="border-color: #334155; margin-top: 20px;">
+                <p style="color: #475569; font-size: 12px;">Genesis Cybersecurity Dashboard</p>
+            </div>
         </body>
     </html>
     """

@@ -26,8 +26,13 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
-    EMAILS_FROM_EMAIL: str | None = "admin@genesis.local"
-    EMAILS_FROM_NAME: str | None = "Genesis Admin"
+    EMAILS_FROM_EMAIL: str | None = None  # Defaults to SMTP_USER if not set
+    EMAILS_FROM_NAME: str | None = "Genesis Security"
+
+    @property
+    def from_email(self) -> str:
+        """Return sender email, defaulting to SMTP_USER (required for Gmail)"""
+        return self.EMAILS_FROM_EMAIL or self.SMTP_USER or "noreply@genesis.local"
     
     class Config:
         env_file = str(_ENV_FILE)
@@ -41,11 +46,15 @@ def _log_key_status():
         "IPQUALITYSCORE_API_KEY": settings.IPQUALITYSCORE_API_KEY,
         "GEMINI_API_KEY": settings.GEMINI_API_KEY,
         "GOOGLE_SAFE_BROWSING_KEY": settings.GOOGLE_SAFE_BROWSING_KEY,
+        "SMTP_SERVER": settings.SMTP_SERVER,
+        "SMTP_USER": settings.SMTP_USER,
+        "SMTP_PASSWORD": "SET" if settings.SMTP_PASSWORD else None,
     }
     print(f"\n[Config] Loading .env from: {_ENV_FILE} (exists: {_ENV_FILE.exists()})")
     for name, val in keys.items():
         status = "✓ SET" if val else "✗ NOT SET"
         print(f"[Config] {name}: {status}")
+    print(f"[Config] From Email will be: {settings.from_email}")
     print()
 
 _log_key_status()
