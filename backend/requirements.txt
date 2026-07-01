@@ -13,6 +13,7 @@ pydantic-settings
 aiohttp
 dnspython
 openpyxl
+reportlab
 
 httpx
 PyPDF2
