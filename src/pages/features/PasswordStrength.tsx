@@ -25,8 +25,7 @@ export const PasswordStrength = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-            const response = await fetch(`${apiBase}/scan/password-strength`, {
+            const response = await fetch('http://127.0.0.1:8000/api/v1/scan/password-strength', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
