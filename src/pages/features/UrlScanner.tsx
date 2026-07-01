@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState } from 'react';
 import { Card } from '../../components/Card';
 import { Input } from '../../components/Input';
@@ -28,7 +28,8 @@ export const UrlScanner = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://127.0.0.1:8000/api/v1/ip/url?url=${encodeURIComponent(trimmedUrl)}`, {
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+            const response = await fetch(`${apiBase}/ip/url?url=${encodeURIComponent(trimmedUrl)}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

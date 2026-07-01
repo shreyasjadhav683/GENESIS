@@ -11,10 +11,19 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "CHANGE_THIS_TO_A_SECURE_SECRET_KEY_IN_PRODUCTION"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
+
     # Database
     DATABASE_URL: str = "sqlite:///./genesis.db"
-    
+
+    # CORS — comma-separated list of allowed origins.
+    # Override via ALLOWED_ORIGINS env var in production.
+    ALLOWED_ORIGINS: str = (
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173,"
+        "http://localhost:3000,"
+        "https://shreyasjadhav683.github.io"
+    )
+
     # API Keys for IP Scanner
     ABUSEIPDB_API_KEY: str | None = None
     IPQUALITYSCORE_API_KEY: str | None = None

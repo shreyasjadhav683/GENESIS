@@ -6,17 +6,13 @@ from app.core.db import create_db_and_tables
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json")
 
-# Set all CORS enabled origins
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "*"  # Allow all as fallback
-]
+# Build the list of allowed origins from settings (comma-separated string).
+# This includes localhost for dev and the GitHub Pages URL for production.
+origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,        # explicit list — required when allow_credentials=True
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

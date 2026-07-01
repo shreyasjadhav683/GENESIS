@@ -62,7 +62,8 @@ export const MetadataViewer = () => {
             formData.append('last_modified', file.lastModified.toString());
 
             const token = localStorage.getItem('token');
-            const response = await fetch('http://127.0.0.1:8000/api/v1/files/metadata', {
+            const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+            const response = await fetch(`${apiBase}/files/metadata`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
