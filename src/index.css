@@ -1,0 +1,32 @@
+
+@import './styles/variables.css';
+@import './styles/animations.css';
+@import './styles/main.css';
+@import './styles/mobile.css';
+
+:root {
+  font-family: 'Rajdhani', sans-serif; /* Tech-body font */
+  line-height: 1.5;
+  font-weight: 500;
+
+  color-scheme: light dark;
+  color: hsl(var(--text-primary));
+  background-color: hsl(var(--bg-primary));
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Orbitron', sans-serif; /* Futuristic Headers */
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}

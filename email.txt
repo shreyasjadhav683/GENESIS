@@ -1,0 +1,59 @@
+Delivered-To user@example.com
+Received by 2002a056a104688b053e3b1c1886 with SMTP id x8csp248596pxd;
+        Tue, 18 Feb 2026 091245 -0700 (PDT)
+X-Google-Smtp-Source AGHT+IFgl9+...
+X-Received by 2002a17902d509b01d63f4a5c22 with SMTP id d9-20020a170902d50900b001d63f4a5c22mr5078189plb.9.1708272765123;
+        Tue, 18 Feb 2026 091245 -0700 (PDT)
+ARC-Seal i=1; a=rsa-sha256; t=1708272765; cv=none;
+        d=google.com; s=arc-20160816;
+        b=...
+ARC-Message-Signature i=1; a=rsa-sha256; c=relaxedrelaxed; d=google.com; s=arc-20160816;
+        h=tosubjectmessage-iddatefrommime-versiondkim-signature;
+        bh=...
+ARC-Authentication-Results i=1; mx.google.com;
+        dkim=pass header.i=@accounts.google.com header.s=20230601 header.b=XyZ123;
+        spf=pass (google.com domain of 3abc123-notifications@google.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=3abc123-notifications@google.com;
+        dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=accounts.google.com
+Return-Path 3abc123-notifications@google.com
+Received from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id u12-20020a170902c50c00b001d60b3f88f8sor2374665plg.6.2026.02.18.09.12.44
+        for user@example.com
+        (Google Transport Security);
+        Tue, 18 Feb 2026 091245 -0700 (PDT)
+Received-SPF pass (google.com domain of 3abc123-notifications@google.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results mx.google.com;
+        dkim=pass header.i=@accounts.google.com header.s=20230601 header.b=XyZ123;
+        spf=pass (google.com domain of 3abc123-notifications@google.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=3abc123-notifications@google.com;
+        dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=accounts.google.com
+DKIM-Signature v=1; a=rsa-sha256; c=relaxedrelaxed;
+        d=accounts.google.com; s=20230601; t=1708272764; x=1708877564;
+        h=tosubjectmessage-iddatefrommime-versionfromtoccsubjectdatemessage-idreply-to;
+        bh=...;
+        b=...
+MIME-Version 1.0
+From Google no-reply@accounts.google.com
+Date Tue, 18 Feb 2026 161244 GMT
+Message-ID 1234567890.example@notifications.google.com
+Subject Critical security alert for your linked Google Account
+To user@example.com
+Content-Type multipartalternative; boundary=000000000000abc1230611a12345
+
+--000000000000abc1230611a12345
+Content-Type textplain; charset=UTF-8; format=flowed; delsp=yes
+
+New sign-in on Windows
+Mangesh, your Google Account was just signed in to from a new Windows device.
+You're getting this email to make sure it was you.
+Check activity httpsaccounts.google.comAccountChooserEmail=user@example.com
+
+--000000000000abc1230611a12345
+Content-Type texthtml; charset=UTF-8
+Content-Transfer-Encoding quoted-printable
+
+html
+  body
+    pNew sign-in on Windowsp
+    pMangesh, your Google Account was just signed in to from a new Windows device.p
+  body
+html
+--000000000000abc1230611a12345--

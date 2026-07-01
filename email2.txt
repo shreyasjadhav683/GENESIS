@@ -1,0 +1,22 @@
+Return-Path: <admin@paypa1-security.xyz>
+Received: from mail-fraud.paypa1-security.xyz (unknown [185.220.101.1])
+    by mx.google.com with ESMTP id abc123def456;
+    Fri, 21 Feb 2026 10:00:00 +0000 (UTC)
+Received: from localhost (unknown [10.0.0.1])
+    by mail-fraud.paypa1-security.xyz (Postfix) with ESMTP id 789ABC;
+    Fri, 21 Feb 2026 09:59:58 +0000 (UTC)
+From: PayPal Security Team <security@paypa1-security.xyz>
+To: shreyasjadhav683@gmail.com
+Subject: URGENT: Your account has been compromised - Verify Now
+Date: Fri, 21 Feb 2026 10:00:00 +0000
+Message-ID: <fake-msg-id-12345@paypa1-security.xyz>
+MIME-Version: 1.0
+Content-Type: text/html; charset="UTF-8"
+X-Mailer: PHP/7.4.3
+X-Originating-IP: 185.220.101.1
+Authentication-Results: mx.google.com;
+    spf=fail (sender IP is 185.220.101.1) smtp.mailfrom=paypa1-security.xyz;
+    dkim=none;
+    dmarc=fail (p=NONE sp=NONE) header.from=paypa1-security.xyz
+X-Spam-Status: Yes, score=9.5
+X-Spam-Flag: YES

@@ -1,0 +1,309 @@
+// Comprehensive IP Scanner Results Component
+// This shows the complete redesigned results section with all details
+
+{/* Results */}
+{result && (
+    <div className="space-y-6 animate-fade-in">
+        
+        {/* Risk Assessment - Hero Card */}
+        <div className={`relative overflow-hidden rounded-2xl border-2 ${
+            result.risk_assessment.severity === 'Critical' ? 'border-red-500' :
+            result.risk_assessment.severity === 'High' ? 'border-orange-500' :
+            result.risk_assessment.severity === 'Medium' ? 'border-yellow-500' :
+            'border-emerald-500'
+        } bg-gradient-to-br from-gray-900/90 to-gray-950/90 backdrop-blur-xl`}>
+            {/* Background gradient based on severity */}
+            <div className={`absolute top-0 right-0 w-96 h-96 bg-gradient-to-br ${colors?.gradient} opacity-10 blur-3xl`} />
+            
+            <div className="relative p-8">
+                <div className="flex items-start justify-between mb-6">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Security Analysis</h2>
+                        <p className="text-gray-400">IP: {result.ip}</p>
+                        {result.geographic_details && (
+                            <p className="text-gray-400 text-sm mt-1">
+                                📍 {result.geographic_details.city}, {result.geographic_details.country}
+                            </p>
+                        )}
+                    </div>
+                    
+                    {/* Risk Score Badge */}
+                    <div className={`px-6 py-4 rounded-2xl border-2 ${
+                        result.risk_assessment.severity === 'Critical' ? 'border-red-500 bg-red-500/20' :
+                        result.risk_assessment.severity === 'High' ? 'border-orange-500 bg-orange-500/20' :
+                        result.risk_assessment.severity === 'Medium' ? 'border-yellow-500 bg-yellow-500/20' :
+                        'border-emerald-500 bg-emerald-500/20'
+                    }`}>
+                        <div className="text-center">
+                            <div className={`text-4xl font-bold ${
+                                result.risk_assessment.severity === 'Critical' ? 'text-red-400' :
+                                result.risk_assessment.severity === 'High' ? 'text-orange-400' :
+                                result.risk_assessment.severity === 'Medium' ? 'text-yellow-400' :
+                                'text-emerald-400'
+                            }`}>
+                                {result.risk_assessment.score}
+                            </div>
+                            <div className="text-sm text-gray-400 mt-1">Risk Score</div>
+                            <div className={`text-lg font-bold mt-2 ${
+                                result.risk_assessment.severity === 'Critical' ? 'text-red-400' :
+                                result.risk_assessment.severity === 'High' ? 'text-orange-400' :
+                                result.risk_assessment.severity === 'Medium' ? 'text-yellow-400' :
+                                'text-emerald-400'
+                            }`}>
+                                {result.risk_assessment.severity.toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Malicious Status Banner */}
+                {result.risk_assessment.is_malicious && (
+                    <div className="mb-6 p-4 rounded-xl bg-red-500/20 border-2 border-red-500 flex items-center gap-3">
+                        <ShieldAlert size={24} className="text-red-400" />
+                        <div>
+                            <div className="text-red-400 font-bold text-lg">⚠️ MALICIOUS IP DETECTED</div>
+                            <div className="text-red-300 text-sm">This IP has been flagged for malicious activity</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Recommendation */}
+                <div className={`p-4 rounded-xl bg-gradient-to-r ${colors?.gradient} bg-opacity-10 border border-white/10`}>
+                    <div className="flex items-start gap-3">
+                        <Shield size={20} className="text-white mt-0.5 flex-shrink-0" />
+                        <div>
+                            <span className="font-semibold text-white">Recommendation</span>
+                            <p className="text-white/80 text-sm mt-1">{result.risk_assessment.recommendation}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Threat Intelligence Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Malicious Indicators */}
+            {(result.threat_intelligence.abuse_confidence_score > 0 || result.threat_intelligence.fraud_score > 0 || result.threat_intelligence.is_blacklisted) && (
+                <div className="rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-900/20 to-gray-900/80 backdrop-blur-xl p-6">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-3">
+                        <AlertTriangle className="text-red-400" size={22} />
+                        Threat Indicators
+                    </h3>
+                    
+                    <div className="space-y-4">
+                        {/* Abuse Confidence */}
+                        {result.threat_intelligence.abuse_confidence_score > 0 && (
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-gray-400">Abuse Confidence</span>
+                                    <span className="text-xl font-bold text-red-400">
+                                        {result.threat_intelligence.abuse_confidence_score}%
+                                    </span>
+                                </div>
+                                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-red-500 to-orange-500"
+                                        style={{ width: `${result.threat_intelligence.abuse_confidence_score}%` }}
+                                    />
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                    {result.threat_intelligence.abuse_reports} abuse reports
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Fraud Score */}
+                        {result.threat_intelligence.fraud_score > 0 && (
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm text-gray-400">Fraud Score</span>
+                                    <span className="text-xl font-bold text-orange-400">
+                                        {result.threat_intelligence.fraud_score}%
+                                    </span>
+                                </div>
+                                <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-orange-500 to-yellow-500"
+                                        style={{ width: `${result.threat_intelligence.fraud_score}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Blacklist Status */}
+                        <div className={`p-3 rounded-lg border ${
+                            result.threat_intelligence.is_blacklisted
+                                ? 'bg-red-500/20 border-red-500'
+                                : 'bg-emerald-500/10 border-emerald-500/30'
+                        }`}>
+                            <div className="flex items-center gap-2">
+                                {result.threat_intelligence.is_blacklisted ? (
+                                    <>
+                                        <ShieldX size={20} className="text-red-400" />
+                                        <span className="font-bold text-red-400">BLACKLISTED</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShieldCheck size={20} className="text-emerald-400" />
+                                        <span className="font-bold text-emerald-400">NOT BLACKLISTED</span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Network Information */}
+            {result.network_info && (
+                <div className="rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-900/20 to-gray-900/80 backdrop-blur-xl p-6">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-3">
+                        <Network className="text-blue-400" size={22} />
+                        Network Information
+                    </h3>
+                    
+                    <div className="space-y-3">
+                        {result.network_info.isp && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">ISP Provider</div>
+                                <div className="text-white font-medium">{result.network_info.isp}</div>
+                            </div>
+                        )}
+                        {result.network_info.organization && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">Organization</div>
+                                <div className="text-white font-medium">{result.network_info.organization}</div>
+                            </div>
+                        )}
+                        {result.network_info.asn && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">ASN</div>
+                                <div className="text-white font-medium">{result.network_info.asn}</div>
+                                {result.network_info.asn_name && (
+                                    <div className="text-sm text-gray-400">{result.network_info.asn_name}</div>
+                                )}
+                            </div>
+                        )}
+                        {result.threat_intelligence.usage_type && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">Usage Type</div>
+                                <div className="text-white font-medium">{result.threat_intelligence.usage_type}</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+
+        {/* Threat Categories */}
+        {result.threat_intelligence.threat_categories && result.threat_intelligence.threat_categories.length > 0 && (
+            <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/20 to-gray-900/80 backdrop-blur-xl p-6">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-3">
+                    <ShieldAlert className="text-purple-400" size={22} />
+                    Detected Threat Categories
+                </h3>
+                
+                <div className="flex flex-wrap gap-2">
+                    {result.threat_intelligence.threat_categories.map((category, index) => (
+                        <span 
+                            key={index}
+                            className="px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-500/50 text-purple-300 font-medium text-sm"
+                        >
+                            {category}
+                        </span>
+                    ))}
+                </div>
+            </div>
+        )}
+
+        {/* Geographic & Technical Details Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Geographic Details */}
+            {result.geographic_details && (
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-950/80 backdrop-blur-xl p-6">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-3">
+                        <MapPin className="text-cyan-400" size={22} />
+                        Geographic Details
+                    </h3>
+                    
+                    <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">Country</div>
+                                <div className="text-white font-medium">{result.geographic_details.country || 'Unknown'}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">City</div>
+                                <div className="text-white font-medium">{result.geographic_details.city || 'Unknown'}</div>
+                            </div>
+                        </div>
+                        {result.geographic_details.timezone && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">Timezone</div>
+                                <div className="text-white font-medium">{result.geographic_details.timezone}</div>
+                            </div>
+                        )}
+                        {(result.geographic_details.latitude && result.geographic_details.longitude) && (
+                            <div>
+                                <div className="text-xs text-gray-500 uppercase">Coordinates</div>
+                                <div className="text-white font-mono text-sm">
+                                    {result.geographic_details.latitude.toFixed(4)}, {result.geographic_details.longitude.toFixed(4)}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Port Scan Results */}
+            {result.port_scan && result.port_scan.open_ports && result.port_scan.open_ports.length > 0 && (
+                <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-950/80 backdrop-blur-xl p-6">
+                    <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-3">
+                        <Server className="text-yellow-400" size={22} />
+                        Open Ports ({result.port_scan.open_ports.length})
+                    </h3>
+                    
+                    <div className="space-y-2">
+                        {result.port_scan.open_ports.slice(0, 8).map((port) => (
+                            <div key={port} className="flex justify-between items-center p-2 rounded bg-gray-800/50">
+                                <span className="text-white font-mono">{port}</span>
+                                <span className="text-gray-400 text-sm">
+                                    {result.port_scan.services_detected[port] || 'Unknown Service'}
+                                </span>
+                            </div>
+                        ))}
+                        {result.port_scan.open_ports.length > 8 && (
+                            <div className="text-center text-gray-500 text-sm pt-2">
+                                +{result.port_scan.open_ports.length - 8} more ports
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+
+        {/* Risk Factors */}
+        {result.risk_assessment.factors && result.risk_assessment.factors.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900/80 to-gray-950/80 backdrop-blur-xl p-6">
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-3">
+                    <Activity className="text-orange-400" size={22} />
+                    Risk Factors Analysis
+                </h3>
+                
+                <div className="space-y-3">
+                    {result.risk_assessment.factors.map((factor, index) => (
+                        <div key={index} className="p-4 rounded-lg bg-gray-800/50 border border-gray-700">
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="text-white font-semibold">{factor.name}</span>
+                                <span className="text-orange-400 font-bold">+{factor.impact}</span>
+                            </div>
+                            <p className="text-gray-400 text-sm">{factor.description}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )}
+    </div>
+)}
