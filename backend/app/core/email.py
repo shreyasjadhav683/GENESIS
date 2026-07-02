@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 import smtplib
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.core.config import settings
@@ -32,8 +33,9 @@ def send_email(
     part = MIMEText(html_content, "html")
     msg.attach(part)
 
-    print(f"[Email] Attempting to send '{subject}' to {email_to} via {settings.SMTP_SERVER}:{settings.SMTP_PORT} as {from_email}")
-    try:
+    def _send_via_starttls():
+        """Connect via STARTTLS on port 587 (or configured port)."""
+        print(f"[Email] Attempting STARTTLS send to {email_to} via {settings.SMTP_SERVER}:{settings.SMTP_PORT} as {from_email}")
         server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=15)
         server.ehlo()
         server.starttls()
@@ -41,7 +43,35 @@ def send_email(
         server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
         server.sendmail(from_email, email_to, msg.as_string())
         server.quit()
-        print(f"[Email] ✓ Successfully sent to {email_to}")
+
+    def _send_via_ssl():
+        """Connect via implicit SSL on port 465 — fallback if STARTTLS is blocked."""
+        ssl_port = 465
+        print(f"[Email] Attempting SSL fallback send to {email_to} via {settings.SMTP_SERVER}:{ssl_port} as {from_email}")
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(settings.SMTP_SERVER, ssl_port, context=context, timeout=15) as server:
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.sendmail(from_email, email_to, msg.as_string())
+
+    try:
+        _send_via_starttls()
+        print(f"[Email] ✓ Successfully sent to {email_to} (STARTTLS)")
+    except OSError as e:
+        # Network unreachable on port 587 — try SSL port 465 as fallback
+        print(f"[Email] ⚠ STARTTLS failed ({e}), retrying with SSL on port 465...")
+        try:
+            _send_via_ssl()
+            print(f"[Email] ✓ Successfully sent to {email_to} (SSL fallback)")
+        except OSError as e2:
+            print(f"[Email] ✗ SSL fallback also failed: {e2}")
+            print(f"[Email] ✗ Both port 587 and 465 are unreachable. Check your server's outbound firewall rules.")
+            raise
+        except smtplib.SMTPAuthenticationError as e2:
+            print(f"[Email] ✗ SSL Authentication failed: {e2} — Check SMTP_USER and SMTP_PASSWORD")
+            raise
+        except smtplib.SMTPException as e2:
+            print(f"[Email] ✗ SSL SMTP error: {e2}")
+            raise
     except smtplib.SMTPAuthenticationError as e:
         print(f"[Email] ✗ Authentication failed: {e} — Check SMTP_USER and SMTP_PASSWORD (use App Password for Gmail)")
         raise
