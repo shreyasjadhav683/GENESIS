@@ -13,10 +13,11 @@ export const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({ username: '', password: '' });
+    const [step, setStep] = useState<1 | 2>(1);
+    const [formData, setFormData] = useState({ username: '', password: '', otp: '' });
     const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleInit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
@@ -26,15 +27,33 @@ export const Login = () => {
             formDataBody.append('username', formData.username);
             formDataBody.append('password', formData.password);
 
-            const response = await api.post('/auth/login/access-token', formDataBody, {
+            await api.post('/auth/login/init', formDataBody, {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+            setStep(2);
+        } catch (err: any) {
+            setError(err.response?.data?.detail || 'Authentication failed');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await api.post('/auth/login/verify', {
+                username: formData.username,
+                password: formData.password,
+                otp: formData.otp
             });
 
             await login(response.data.access_token);
             navigate('/dashboard');
-
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Authentication failed');
+            setError(err.response?.data?.detail || 'Invalid OTP');
         } finally {
             setLoading(false);
         }
@@ -131,93 +150,164 @@ export const Login = () => {
                         boxShadow: 'var(--shadow-xl)'
                     }}
                 >
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        {/* Error Alert */}
-                        {error && (
-                            <div style={{ 
-                                padding: '0.875rem 1rem', 
-                                background: 'hsl(var(--color-error-light))', 
-                                border: '1px solid hsla(var(--color-error), 0.3)', 
-                                borderRadius: 'var(--radius-md)', 
-                                color: 'hsl(var(--color-error))', 
-                                fontSize: '0.875rem', 
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                            }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <line x1="12" y1="8" x2="12" y2="12"/>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                                </svg>
-                                {error}
-                            </div>
-                        )}
-
-                        {/* Username Input */}
-                        <Input
-                            placeholder="Enter your username"
-                            label="Username"
-                            icon={<User size={18} />}
-                            value={formData.username}
-                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                            required
-                        />
-                        
-                        {/* Password Input */}
-                        <Input
-                            type="password"
-                            placeholder="Enter your password"
-                            label="Password"
-                            icon={<Lock size={18} />}
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            required
-                        />
-
-                        {/* Links */}
-                        <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'space-between', 
-                            fontSize: '0.8rem'
-                        }}>
-                            <Link 
-                                to="/register" 
-                                style={{ 
-                                    textDecoration: 'none', 
-                                    color: 'hsl(var(--color-primary))', 
+                    {step === 1 ? (
+                        <form onSubmit={handleInit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {/* Error Alert */}
+                            {error && (
+                                <div style={{ 
+                                    padding: '0.875rem 1rem', 
+                                    background: 'hsl(var(--color-error-light))', 
+                                    border: '1px solid hsla(var(--color-error), 0.3)', 
+                                    borderRadius: 'var(--radius-md)', 
+                                    color: 'hsl(var(--color-error))', 
+                                    fontSize: '0.875rem', 
                                     fontWeight: 600,
-                                    transition: 'opacity 0.2s'
-                                }}
-                            >
-                                Create Account
-                            </Link>
-                            <Link 
-                                to="/forgot-password" 
-                                style={{ 
-                                    textDecoration: 'none', 
-                                    color: 'hsl(var(--text-secondary))',
-                                    transition: 'color 0.2s'
-                                }}
-                            >
-                                Forgot Password?
-                            </Link>
-                        </div>
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                    {error}
+                                </div>
+                            )}
 
-                        {/* Submit Button */}
-                        <Button 
-                            type="submit" 
-                            isLoading={loading} 
-                            size="lg" 
-                            variant="primary"
-                            rightIcon={<ArrowRight size={18} />}
-                            style={{ width: '100%', marginTop: '0.5rem' }}
-                        >
-                            Sign In
-                        </Button>
-                    </form>
+                            {/* Username Input */}
+                            <Input
+                                placeholder="Enter your username"
+                                label="Username"
+                                icon={<User size={18} />}
+                                value={formData.username}
+                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                required
+                            />
+                            
+                            {/* Password Input */}
+                            <Input
+                                type="password"
+                                placeholder="Enter your password"
+                                label="Password"
+                                icon={<Lock size={18} />}
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                required
+                            />
+
+                            {/* Links */}
+                            <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                fontSize: '0.8rem'
+                            }}>
+                                <Link 
+                                    to="/register" 
+                                    style={{ 
+                                        textDecoration: 'none', 
+                                        color: 'hsl(var(--color-primary))', 
+                                        fontWeight: 600,
+                                        transition: 'opacity 0.2s'
+                                    }}
+                                >
+                                    Create Account
+                                </Link>
+                                <Link 
+                                    to="/forgot-password" 
+                                    style={{ 
+                                        textDecoration: 'none', 
+                                        color: 'hsl(var(--text-secondary))',
+                                        transition: 'color 0.2s'
+                                    }}
+                                >
+                                    Forgot Password?
+                                </Link>
+                            </div>
+
+                            {/* Submit Button */}
+                            <Button 
+                                type="submit" 
+                                isLoading={loading} 
+                                size="lg" 
+                                variant="primary"
+                                rightIcon={<ArrowRight size={18} />}
+                                style={{ width: '100%', marginTop: '0.5rem' }}
+                            >
+                                Continue
+                            </Button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{ padding: '1rem', background: 'hsla(var(--color-primary), 0.1)', borderRadius: '0.5rem', color: 'hsl(var(--color-primary))', fontSize: '0.9rem', textAlign: 'center', fontWeight: 500 }}>
+                                An OTP has been sent to your email. Enter it below to proceed.
+                            </div>
+
+                            {/* Error Alert */}
+                            {error && (
+                                <div style={{ 
+                                    padding: '0.875rem 1rem', 
+                                    background: 'hsl(var(--color-error-light))', 
+                                    border: '1px solid hsla(var(--color-error), 0.3)', 
+                                    borderRadius: 'var(--radius-md)', 
+                                    color: 'hsl(var(--color-error))', 
+                                    fontSize: '0.875rem', 
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                    {error}
+                                </div>
+                            )}
+
+                            {/* OTP Input */}
+                            <Input
+                                placeholder="000000"
+                                label="Verification Code"
+                                icon={<Lock size={18} />}
+                                value={formData.otp}
+                                onChange={(e) => setFormData({ ...formData, otp: e.target.value })}
+                                required
+                                maxLength={6}
+                                style={{ letterSpacing: '0.2em', fontWeight: 'bold' }}
+                            />
+
+                            {/* Submit Button */}
+                            <Button 
+                                type="submit" 
+                                isLoading={loading} 
+                                size="lg" 
+                                variant="primary"
+                                rightIcon={<ArrowRight size={18} />}
+                                style={{ width: '100%', marginTop: '0.5rem' }}
+                            >
+                                Sign In
+                            </Button>
+                            
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                disabled={loading}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'hsl(var(--text-secondary))',
+                                    fontSize: '0.875rem',
+                                    cursor: 'pointer',
+                                    marginTop: '-0.5rem'
+                                }}
+                            >
+                                ← Back
+                            </button>
+                        </form>
+                    )}
                 </Card>
                 
                 {/* Footer */}

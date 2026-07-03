@@ -8,6 +8,8 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp]         = useState('');
+  const [step, setStep]       = useState<1 | 2>(1);
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -17,7 +19,7 @@ export default function AdminLogin() {
     if (localStorage.getItem('admin_token')) navigate('/admin', { replace: true });
   }, [navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleInit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!username.trim() || !password.trim()) {
@@ -26,12 +28,31 @@ export default function AdminLogin() {
     }
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/admin/login`, { username, password });
+      await axios.post(`${API_URL}/admin/login/init`, { username, password });
+      setStep(2);
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || 'Login failed. Check your credentials.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!otp.trim()) {
+      setError('Please enter the OTP sent to your email.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await axios.post(`${API_URL}/admin/login/verify`, { username, password, otp });
       localStorage.setItem('admin_token', res.data.access_token);
       localStorage.setItem('admin_info', JSON.stringify(res.data.admin));
       navigate('/admin', { replace: true });
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Login failed. Check your credentials.';
+      const msg = err.response?.data?.detail || 'Invalid or expired OTP.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -60,65 +81,113 @@ export default function AdminLogin() {
 
         <div style={s.divider} />
 
-        <form onSubmit={handleSubmit} style={s.form}>
-          {/* Username */}
-          <div style={s.field}>
-            <label style={s.label}>Username or Email</label>
-            <div style={s.inputWrap}>
-              <svg style={s.inputIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-              </svg>
-              <input
-                style={s.input}
-                type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                placeholder="admin username"
-                autoComplete="username"
-                autoFocus
-              />
+        {step === 1 ? (
+          <form onSubmit={handleInit} style={s.form}>
+            {/* Username */}
+            <div style={s.field}>
+              <label style={s.label}>Username or Email</label>
+              <div style={s.inputWrap}>
+                <svg style={s.inputIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                <input
+                  style={s.input}
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="admin username"
+                  autoComplete="username"
+                  autoFocus
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Password */}
-          <div style={s.field}>
-            <label style={s.label}>Password</label>
-            <div style={s.inputWrap}>
-              <svg style={s.inputIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <input
-                style={s.input}
-                type={showPass ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-              <button type="button" style={s.eyeBtn} onClick={() => setShowPass(v => !v)} tabIndex={-1}>
-                {showPass ? '🙈' : '👁️'}
-              </button>
+            {/* Password */}
+            <div style={s.field}>
+              <label style={s.label}>Password</label>
+              <div style={s.inputWrap}>
+                <svg style={s.inputIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input
+                  style={s.input}
+                  type={showPass ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+                <button type="button" style={s.eyeBtn} onClick={() => setShowPass(v => !v)} tabIndex={-1}>
+                  {showPass ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Error */}
-          {error && (
-            <div style={s.errorBox}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <span>{error}</span>
+            {/* Error */}
+            {error && (
+              <div style={s.errorBox}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button style={{ ...s.btn, opacity: loading ? 0.7 : 1 }} type="submit" disabled={loading}>
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                  <span style={s.spinner} /> Authenticating...
+                </span>
+              ) : 'Continue'}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerify} style={s.form}>
+            <div style={{ background: '#1c0a0a', border: '1px solid #dc262640', padding: '12px', borderRadius: 8, color: '#fca5a5', fontSize: 13, textAlign: 'center' }}>
+              An OTP has been sent to your email. Enter it below to proceed.
             </div>
-          )}
 
-          <button style={{ ...s.btn, opacity: loading ? 0.7 : 1 }} type="submit" disabled={loading}>
-            {loading ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
-                <span style={s.spinner} /> Authenticating...
-              </span>
-            ) : 'Sign In to Admin Panel'}
-          </button>
-        </form>
+            {/* OTP */}
+            <div style={s.field}>
+              <label style={s.label}>Verification Code</label>
+              <div style={s.inputWrap}>
+                <svg style={s.inputIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input
+                  style={{ ...s.input, letterSpacing: '0.2em', fontWeight: 'bold' }}
+                  type="text"
+                  value={otp}
+                  onChange={e => setOtp(e.target.value)}
+                  placeholder="000000"
+                  maxLength={6}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div style={s.errorBox}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button style={{ ...s.btn, opacity: loading ? 0.7 : 1 }} type="submit" disabled={loading}>
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                  <span style={s.spinner} /> Verifying...
+                </span>
+              ) : 'Sign In to Admin Panel'}
+            </button>
+            <button type="button" style={s.backLink} onClick={() => setStep(1)} disabled={loading}>
+              ← Back to credentials
+            </button>
+          </form>
+        )}
 
         <div style={s.divider} />
 

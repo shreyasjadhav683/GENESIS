@@ -15,22 +15,74 @@ from app.api import deps
 import random
 
 
+from sqlmodel import Session, select, SQLModel
+
 class UserRegister(UserCreate):
+    otp: str
+
+class LoginVerifyRequest(SQLModel):
+    username: str
+    password: str
     otp: str
 
 router = APIRouter()
 
-@router.post("/login/access-token", response_model=Token)
-def login_access_token(
+@router.post("/login/init", response_model=dict)
+def login_init(
     session: Session = Depends(get_session), 
-    form_data: OAuth2PasswordRequestForm = Depends()
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    background_tasks: BackgroundTasks = BackgroundTasks()
 ) -> Any:
+    """Step 1 of 2FA: Verify password and send OTP to email."""
     statement = select(User).where(User.username == form_data.username)
     user = session.exec(statement).first()
     if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Invalid username or password")
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+        
+    otp = str(random.randint(100000, 999999))
+    otp_hash = security.get_password_hash(otp)
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    
+    otp_record = OTP(
+        email=user.email,
+        otp_hash=otp_hash,
+        purpose="login",
+        expires_at=expires_at
+    )
+    session.add(otp_record)
+    session.commit()
+    
+    background_tasks.add_task(send_otp_email, user.email, otp, "login")
+    
+    return {"message": "OTP sent to your email", "email": user.email}
+
+@router.post("/login/verify", response_model=Token)
+def login_verify(
+    session: Session = Depends(get_session),
+    data: LoginVerifyRequest = Body(...)
+) -> Any:
+    """Step 2 of 2FA: Verify password again + check OTP to issue JWT."""
+    statement = select(User).where(User.username == data.username)
+    user = session.exec(statement).first()
+    if not user or not security.verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+    elif not user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+
+    otp_stmt = select(OTP).where(
+        OTP.email == user.email, 
+        OTP.purpose == "login"
+    ).order_by(OTP.created_at.desc())
+    otp_record = session.exec(otp_stmt).first()
+    
+    if not otp_record or not security.verify_password(data.otp, otp_record.otp_hash):
+         raise HTTPException(status_code=400, detail="Invalid OTP")
+         
+    if datetime.utcnow() > otp_record.expires_at:
+         raise HTTPException(status_code=400, detail="OTP expired")
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
@@ -38,7 +90,6 @@ def login_access_token(
         ),
         "token_type": "bearer",
     }
-
 @router.get("/me", response_model=UserRead)
 def get_current_user_data(
     current_user: User = Depends(deps.get_current_user)
