@@ -1,20 +1,68 @@
 """
 Admin endpoints — superuser only.
-Provides user management: list, activate/deactivate, delete, promote to superuser.
-All routes require is_superuser=True on the calling account.
+Provides a dedicated admin login + full user management.
+All management routes require is_superuser=True on the calling account.
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, List
 
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlmodel import Session, select
 
 from app.api import deps
+from app.core import security
+from app.core.config import settings
 from app.core.db import get_session
-from app.models.user import User, UserRead
+from app.models.user import User
 
 router = APIRouter()
 
+
+# ── Admin Login ───────────────────────────────────────────────────────────────
+
+@router.post("/login", response_model=dict)
+def admin_login(
+    *,
+    session: Session = Depends(get_session),
+    username: str = Body(...),
+    password: str = Body(...),
+) -> Any:
+    """
+    Dedicated admin login. Returns a JWT only if the user is a superuser.
+    Stores no separate session — uses the same JWT mechanism as regular auth.
+    """
+    # Find user by username or email
+    user = session.exec(select(User).where(User.username == username)).first()
+    if not user:
+        user = session.exec(select(User).where(User.email == username)).first()
+
+    if not user or not security.verify_password(password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account is inactive")
+
+    if not user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied. This account does not have admin privileges.",
+        )
+
+    token = security.create_access_token(
+        user.id, expires_delta=timedelta(hours=8)
+    )
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "admin": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+        },
+    }
+
+
+# ── Superuser guard ───────────────────────────────────────────────────────────
 
 def require_superuser(current_user: User = Depends(deps.get_current_user)) -> User:
     """Dependency: raises 403 if caller is not a superuser."""

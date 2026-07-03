@@ -27,6 +27,8 @@ import { WhoisDnsLookup } from './pages/features/WhoisDnsLookup';
 import { SslChecker } from './pages/features/SslChecker';
 import { ChangePassword } from './pages/ChangePassword';
 import { Profile } from './pages/Profile';
+import AdminPanel from './pages/AdminPanel';
+import AdminLogin from './pages/AdminLogin';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -44,6 +46,10 @@ function AppRoutes() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      {/* Standalone Admin routes — use their own admin_token, not the regular user token */}
+      <Route path="/admin-login" element={<AdminLogin />} />
+      <Route path="/admin" element={<AdminPanel />} />
 
       {/* Protected Routes */}
       <Route path="/" element={
@@ -86,7 +92,7 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
