@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, ip_tools, files, scan, ai, reports, history, file_integrity, users, whois_dns
+from app.api.v1.endpoints import auth, ip_tools, files, scan, ai, reports, history, file_integrity, users, whois_dns, admin
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -12,4 +12,5 @@ api_router.include_router(ai.router, prefix="/ai", tags=["ai"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(history.router, prefix="/history", tags=["history"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 
