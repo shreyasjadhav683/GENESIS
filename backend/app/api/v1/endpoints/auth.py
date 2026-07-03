@@ -105,10 +105,11 @@ def register_user(
 ) -> Any:
     # Extract OTP
     otp = user_in.otp
+    email_lower = user_in.email.lower()
     # Verify OTP
     # For registration, we might use the email from user_in to verify
     statement = select(OTP).where(
-        OTP.email == user_in.email, 
+        OTP.email == email_lower, 
         OTP.purpose == "register"
     ).order_by(OTP.created_at.desc())
     otp_record = session.exec(statement).first()
@@ -122,7 +123,9 @@ def register_user(
     print(f"DEBUG: Registering user {user_in.username}")
     print(f"DEBUG: Data received: {user_in}")
     
-    statement = select(User).where(User.username == user_in.username)
+    statement = select(User).where(
+        (User.username == user_in.username) | (User.email == email_lower)
+    )
     user = session.exec(statement).first()
     if user:
         print("DEBUG: User already exists")
@@ -134,6 +137,7 @@ def register_user(
     # Exclude fields that are not in the User model (like security_answer)
     try:
         user_data = user_in.dict(exclude={"password", "security_answer", "otp"})
+        user_data["email"] = email_lower
         user = User(**user_data)
         
         user.hashed_password = security.get_password_hash(user_in.password)
@@ -204,8 +208,9 @@ def verify_otp_only(
     otp: str = Body(..., embed=True),
     purpose: str = Body(..., embed=True),
 ) -> Any:
+    email_lower = email.lower()
     statement = select(OTP).where(
-        OTP.email == email, 
+        OTP.email == email_lower, 
         OTP.purpose == purpose
     ).order_by(OTP.created_at.desc())
     otp_record = session.exec(statement).first()
@@ -259,7 +264,8 @@ def identify_user(
     
     # Try by email if not found
     if not user:
-        statement = select(User).where(User.email == identifier)
+        identifier_lower = identifier.lower()
+        statement = select(User).where(User.email == identifier_lower)
         user = session.exec(statement).first()
 
     if not user:
@@ -282,7 +288,8 @@ def request_otp(
     email: str = Body(..., embed=True),
     purpose: str = Body(..., embed=True), # register, reset, change_password
 ) -> Any:
-    user_statement = select(User).where(User.email == email)
+    email_lower = email.lower()
+    user_statement = select(User).where(User.email == email_lower)
     user = session.exec(user_statement).first()
 
     if purpose == "register":
@@ -305,7 +312,7 @@ def request_otp(
     # Store OTP
     otp_hash = security.get_password_hash(code)
     db_otp = OTP(
-        email=email,
+        email=email_lower,
         otp_hash=otp_hash,
         purpose=purpose,
         expires_at=datetime.utcnow() + timedelta(minutes=10)
@@ -317,7 +324,7 @@ def request_otp(
     email_sent = False
     email_error = None
     try:
-        send_otp_email(email, code, purpose)
+        send_otp_email(email_lower, code, purpose)
         email_sent = True
     except Exception as e:
         email_error = str(e)
@@ -354,15 +361,16 @@ def recover_with_otp(
     otp: str = Body(...),
     new_password: str = Body(...),
 ) -> Any:
+    email_lower = email.lower()
     # Changed input from username to email
-    statement = select(User).where(User.email == email)
+    statement = select(User).where(User.email == email_lower)
     user = session.exec(statement).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
     # Verify OTP
     otp_statement = select(OTP).where(
-        OTP.email == email, 
+        OTP.email == email_lower, 
         OTP.purpose == 'reset'
     ).order_by(OTP.created_at.desc())
     otp_record = session.exec(otp_statement).first()
