@@ -21,13 +21,20 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str | None = None
     GOOGLE_SAFE_BROWSING_KEY: str | None = None
 
-    # SMTP Settings
+    # Brevo HTTP API — works on networks that block SMTP (uses port 443)
+    # Sign up free: https://app.brevo.com → Profile → SMTP & API → API Keys
+    BREVO_API_KEY: str | None = None
+
+    # SMTP (kept for reference only — blocked on this network)
     SMTP_SERVER: str | None = None
     SMTP_PORT: int = 587
     SMTP_USER: str | None = None
     SMTP_PASSWORD: str | None = None
-    EMAILS_FROM_EMAIL: str | None = None  # Defaults to SMTP_USER if not set
+    EMAILS_FROM_EMAIL: str | None = None
     EMAILS_FROM_NAME: str | None = "Genesis Security"
+
+    # Dev mode: if True, OTP is returned in the API response (never use in production)
+    DEV_MODE: bool = False
 
     @property
     def from_email(self) -> str:
@@ -42,19 +49,20 @@ settings = Settings()
 # Startup diagnostics - log which API keys are configured
 def _log_key_status():
     keys = {
+        "BREVO_API_KEY": "SET" if settings.BREVO_API_KEY else None,
+        "DEV_MODE": str(settings.DEV_MODE),
+        "SMTP_USER (sender)": settings.SMTP_USER,
         "ABUSEIPDB_API_KEY": settings.ABUSEIPDB_API_KEY,
         "IPQUALITYSCORE_API_KEY": settings.IPQUALITYSCORE_API_KEY,
         "GEMINI_API_KEY": settings.GEMINI_API_KEY,
         "GOOGLE_SAFE_BROWSING_KEY": settings.GOOGLE_SAFE_BROWSING_KEY,
-        "SMTP_SERVER": settings.SMTP_SERVER,
-        "SMTP_USER": settings.SMTP_USER,
-        "SMTP_PASSWORD": "SET" if settings.SMTP_PASSWORD else None,
     }
     print(f"\n[Config] Loading .env from: {_ENV_FILE} (exists: {_ENV_FILE.exists()})")
     for name, val in keys.items():
         status = "✓ SET" if val else "✗ NOT SET"
         print(f"[Config] {name}: {status}")
-    print(f"[Config] From Email will be: {settings.from_email}")
+    if settings.DEV_MODE:
+        print("[Config] ⚠️  DEV_MODE=true  —  OTP codes will be returned in API responses!")
     print()
 
 _log_key_status()

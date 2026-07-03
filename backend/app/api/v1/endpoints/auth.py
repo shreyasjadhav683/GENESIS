@@ -262,17 +262,38 @@ def request_otp(
     session.add(db_otp)
     session.commit()
     
-    # Send email — run synchronously so we can catch errors and report them
+    # Send email
+    email_sent = False
+    email_error = None
     try:
         send_otp_email(email, code, purpose)
+        email_sent = True
     except Exception as e:
+        email_error = str(e)
         print(f"[OTP] Email delivery failed for {email}: {e}")
+
+    # Build response
+    response: dict = {"message": "OTP sent to email"}
+
+    if settings.DEV_MODE:
+        # In dev mode, always include the OTP so you can test without email
+        response["dev_otp"] = code
+        response["dev_warning"] = "DEV_MODE is ON — OTP exposed in response. Never use in production."
+        if not email_sent:
+            response["message"] = f"Email delivery failed (DEV_MODE: use dev_otp above)"
+        return response
+
+    if not email_sent:
         raise HTTPException(
             status_code=500,
-            detail=f"OTP generated but email delivery failed: {str(e)}. Check server SMTP configuration."
+            detail=(
+                f"OTP generated but email delivery failed: {email_error}. "
+                "Tip: Set DEV_MODE=true in .env to receive OTP directly in this response for testing, "
+                "or configure BREVO_API_KEY for reliable email via HTTPS."
+            )
         )
-    
-    return {"message": "OTP sent to email"}
+
+    return response
 
 @router.post("/recover-with-otp", response_model=Any)
 def recover_with_otp(
