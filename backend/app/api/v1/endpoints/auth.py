@@ -40,6 +40,8 @@ def login_init(
         raise HTTPException(status_code=400, detail="Invalid username or password")
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    elif user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admins must use the Admin Login portal")
         
     otp = str(random.randint(100000, 999999))
     otp_hash = security.get_password_hash(otp)
@@ -70,6 +72,8 @@ def login_verify(
         raise HTTPException(status_code=400, detail="Invalid username or password")
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+    elif user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admins must use the Admin Login portal")
 
     otp_stmt = select(OTP).where(
         OTP.email == user.email, 

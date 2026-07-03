@@ -235,19 +235,11 @@ export const Register: React.FC = () => {
                         Already have an account? Login
                     </Link>
                 </div>
-                <div style={{ textAlign: 'center', marginTop: '-0.5rem' }}>
-                    <Link 
-                        to="/admin-login" 
-                        style={{ 
-                            color: 'hsl(var(--text-secondary))', 
-                            fontSize: '0.75rem', 
-                            textDecoration: 'none',
-                            transition: 'color 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = 'hsl(var(--color-primary))'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = 'hsl(var(--text-secondary))'}
-                    >
-                        Admin Portal Login
+
+                {/* Admin Link */}
+                <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+                    <Link to="/admin-login" style={{ fontSize: '0.75rem', color: 'hsl(var(--text-secondary))', textDecoration: 'none', opacity: 0.7, transition: 'opacity 0.2s' }}>
+                        Administrator Portal
                     </Link>
                 </div>
             </form>

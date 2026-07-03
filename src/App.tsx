@@ -92,7 +92,7 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <HashRouter basename={import.meta.env.BASE_URL}>
+      <HashRouter>
         <AppRoutes />
       </HashRouter>
     </AuthProvider>
