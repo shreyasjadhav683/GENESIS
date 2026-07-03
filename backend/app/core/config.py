@@ -59,10 +59,11 @@ def _log_key_status():
     }
     print(f"\n[Config] Loading .env from: {_ENV_FILE} (exists: {_ENV_FILE.exists()})")
     for name, val in keys.items():
-        status = "✓ SET" if val else "✗ NOT SET"
+        status = "[OK]  SET" if val else "[!!] NOT SET"
         print(f"[Config] {name}: {status}")
     if settings.DEV_MODE:
-        print("[Config] ⚠️  DEV_MODE=true  —  OTP codes will be returned in API responses!")
+        print("[Config] WARNING: DEV_MODE=true  --  OTP codes will be returned in API responses!")
     print()
+
 
 _log_key_status()
