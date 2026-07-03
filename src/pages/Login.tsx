@@ -319,6 +319,21 @@ export const Login = () => {
                     }}>
                         Protected by enterprise-grade security
                     </p>
+                    <Link 
+                        to="/admin-login" 
+                        style={{ 
+                            color: 'hsl(var(--text-secondary))', 
+                            fontSize: '0.75rem', 
+                            textDecoration: 'none', 
+                            marginTop: '0.75rem', 
+                            display: 'inline-block',
+                            transition: 'color 0.2s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = 'hsl(var(--color-primary))'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = 'hsl(var(--text-secondary))'}
+                    >
+                        Admin Portal Login
+                    </Link>
                 </div>
             </div>
         </div>
