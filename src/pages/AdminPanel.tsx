@@ -20,12 +20,7 @@ interface UserRecord {
   last_active?: string;
 }
 
-interface Stats {
-  total_users: number;
-  active_users: number;
-  inactive_users: number;
-  admin_users: number;
-}
+
 
 const getActivityStatus = (u: UserRecord): 'Online' | 'Offline' | 'Disabled' => {
   if (!u.is_active) return 'Disabled';
