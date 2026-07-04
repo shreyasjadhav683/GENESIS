@@ -1,6 +1,8 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
+from sqlalchemy import func
+from datetime import datetime, timedelta, timezone
 
 from app.api import deps
 from app.core.db import get_session
@@ -8,6 +10,50 @@ from app.models.user import User
 from app.models.scan_history import ScanHistory, ScanHistoryCreate, ScanHistoryRead
 
 router = APIRouter()
+
+@router.get("/insights")
+def get_user_insights(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(deps.get_current_user),
+) -> Any:
+    """
+    Retrieve insights/statistics for the current user.
+    """
+    # total scans
+    total_scans = session.exec(
+        select(func.count(ScanHistory.id))
+        .where(ScanHistory.user_id == current_user.id)
+    ).one_or_none() or 0
+    
+    # scan types
+    scan_types = session.exec(
+        select(ScanHistory.scan_type, func.count(ScanHistory.id))
+        .where(ScanHistory.user_id == current_user.id)
+        .group_by(ScanHistory.scan_type)
+    ).all()
+    
+    by_type = [{"type": st, "count": c} for st, c in scan_types]
+    
+    # active days (last 7 days)
+    now = datetime.utcnow()
+    daily_data = []
+    for i in range(7):
+        date = (now - timedelta(days=6-i)).date()
+        start_of_day = datetime(date.year, date.month, date.day)
+        end_of_day = start_of_day + timedelta(days=1)
+        count = session.exec(
+            select(func.count(ScanHistory.id))
+            .where(ScanHistory.user_id == current_user.id)
+            .where(ScanHistory.created_at >= start_of_day)
+            .where(ScanHistory.created_at < end_of_day)
+        ).one_or_none() or 0
+        daily_data.append({"date": date.isoformat(), "scans": count})
+        
+    return {
+        "total_scans": total_scans,
+        "by_type": by_type,
+        "daily_last_7_days": daily_data
+    }
 
 @router.get("/", response_model=List[ScanHistoryRead])
 def read_history(

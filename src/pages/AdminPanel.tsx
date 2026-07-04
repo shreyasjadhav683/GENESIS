@@ -4,6 +4,12 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+const formatDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return 'N/A';
+  const d = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+  return new Date(d).toLocaleString();
+};
+
 interface UserRecord {
   id: number;
   username: string;
@@ -11,6 +17,7 @@ interface UserRecord {
   is_active: boolean;
   is_superuser: boolean;
   security_question: string;
+  last_active?: string;
 }
 
 interface Stats {
@@ -19,6 +26,16 @@ interface Stats {
   inactive_users: number;
   admin_users: number;
 }
+
+const getActivityStatus = (u: UserRecord): 'Online' | 'Offline' | 'Disabled' => {
+  if (!u.is_active) return 'Disabled';
+  if (u.last_active) {
+    const lastStr = u.last_active.endsWith('Z') ? u.last_active : u.last_active + 'Z';
+    const lastTime = new Date(lastStr).getTime();
+    if (new Date().getTime() - lastTime < 15 * 60 * 1000) return 'Online';
+  }
+  return 'Offline';
+};
 
 interface AdminInfo {
   id: number;
@@ -156,11 +173,14 @@ export default function AdminPanel() {
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
     const matchSearch = !q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+    
+    const status = getActivityStatus(u);
     const matchFilter =
       filter === 'all'      ? true :
-      filter === 'active'   ? u.is_active :
-      filter === 'inactive' ? !u.is_active :
+      filter === 'active'   ? status === 'Online' :
+      filter === 'inactive' ? status !== 'Online' :
       u.is_superuser;
+      
     const matchTab = activeTab === 'admins' ? u.is_superuser : !u.is_superuser;
     return matchSearch && matchFilter && matchTab;
   });
@@ -182,7 +202,28 @@ export default function AdminPanel() {
   );
 
   return (
-    <div style={s.page}>
+    <div style={s.page} className="admin-page">
+      <style>{`
+        @media (max-width: 768px) {
+          .admin-page { flex-direction: column !important; }
+          .admin-sidebar { width: 100% !important; height: auto !important; position: static !important; padding: 16px !important; border-right: none !important; border-bottom: 1px solid #0f172a !important; }
+          .admin-nav { flex-direction: row !important; overflow-x: auto !important; padding-bottom: 8px !important; }
+          .admin-nav::-webkit-scrollbar { display: none; }
+          .admin-nav-item { white-space: nowrap !important; }
+          .admin-main { padding: 16px !important; }
+          .admin-header { flex-direction: column !important; align-items: flex-start !important; }
+          .admin-header-actions { width: 100% !important; justify-content: space-between !important; margin-top: 16px !important; }
+          .admin-stats { grid-template-columns: 1fr 1fr !important; }
+          .admin-controls { flex-direction: column !important; align-items: stretch !important; }
+          .admin-search { width: 100% !important; }
+          .admin-filters { overflow-x: auto !important; width: 100% !important; justify-content: space-between !important; }
+          .admin-insights-grid { grid-template-columns: 1fr !important; }
+          .user-details-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .admin-stats { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       {/* Grid BG */}
       <div style={s.gridBg} />
 
@@ -211,7 +252,7 @@ export default function AdminPanel() {
       )}
 
       {/* ── Sidebar ── */}
-      <aside style={s.sidebar}>
+      <aside style={s.sidebar} className="admin-sidebar">
         <div style={s.brand}>
           <div style={s.brandIcon}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round">
@@ -224,7 +265,7 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        <nav style={s.nav}>
+        <nav style={s.nav} className="admin-nav">
           {[
             { id: 'clients',  label: 'Clients',  icon: '👥', count: users.filter(u => !u.is_superuser).length },
             { id: 'admins',   label: 'Admins',   icon: '🛡️', count: users.filter(u =>  u.is_superuser).length },
@@ -233,6 +274,7 @@ export default function AdminPanel() {
           ].map(tab => (
             <button
               key={tab.id}
+              className="admin-nav-item"
               style={{ ...s.navItem, ...(activeTab === tab.id ? s.navItemActive : {}) }}
               onClick={() => { setActiveTab(tab.id as any); setFilter('all'); }}
             >
@@ -246,9 +288,9 @@ export default function AdminPanel() {
       </aside>
 
       {/* ── Main content ── */}
-      <main style={s.main}>
+      <main style={s.main} className="admin-main">
         {/* Header */}
-        <div style={s.mainHeader}>
+        <div style={s.mainHeader} className="admin-header">
           <div>
             <h1 style={s.pageTitle}>
               {activeTab === 'clients' ? 'Client Accounts' : activeTab === 'admins' ? 'Admin Accounts' : activeTab === 'insights' ? 'Insights & Analytics' : 'Account Settings'}
@@ -263,7 +305,7 @@ export default function AdminPanel() {
                 : 'Manage your personal admin profile'}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }} className="admin-header-actions">
             <button style={s.refreshBtn} onClick={fetchAll}>↻ Refresh</button>
             <div style={{ width: 1, height: 24, background: '#1e293b' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -292,13 +334,13 @@ export default function AdminPanel() {
         )}
 
         {/* Stats */}
-        {stats && (activeTab === 'clients' || activeTab === 'admins') && (
-          <div style={s.statsRow}>
+        {(activeTab === 'clients' || activeTab === 'admins') && (
+          <div style={s.statsRow} className="admin-stats">
             {[
-              { label: 'Total Users',   val: stats.total_users,    color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',   icon: '👥' },
-              { label: 'Active',        val: stats.active_users,   color: '#4ade80', bg: 'rgba(74,222,128,0.08)',   icon: '🟢' },
-              { label: 'Inactive',      val: stats.inactive_users, color: '#f87171', bg: 'rgba(248,113,113,0.08)', icon: '🔴' },
-              { label: 'Administrators',val: stats.admin_users,    color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  icon: '🛡️' },
+              { label: 'Total Users',   val: users.length,    color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',   icon: '👥' },
+              { label: 'Active',        val: users.filter(u => getActivityStatus(u) === 'Online').length,   color: '#4ade80', bg: 'rgba(74,222,128,0.08)',   icon: '🟢' },
+              { label: 'Inactive',      val: users.filter(u => getActivityStatus(u) !== 'Online').length, color: '#f87171', bg: 'rgba(248,113,113,0.08)', icon: '🔴' },
+              { label: 'Administrators',val: users.filter(u => u.is_superuser).length,    color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  icon: '🛡️' },
             ].map(st => (
               <div key={st.label} style={{ ...s.statCard, background: st.bg, borderColor: `${st.color}22` }}>
                 <div style={{ fontSize: 24 }}>{st.icon}</div>
@@ -311,14 +353,14 @@ export default function AdminPanel() {
 
         {/* Controls */}
         {(activeTab === 'clients' || activeTab === 'admins') && (
-          <div style={s.controls}>
-            <div style={s.searchWrap}>
+          <div style={s.controls} className="admin-controls">
+            <div style={s.searchWrap} className="admin-search">
               <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <input style={s.searchInput} placeholder={`Search ${activeTab}…`} value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <div style={s.filters}>
+            <div style={s.filters} className="admin-filters">
               {(['all', 'active', 'inactive'] as const).map(f => (
                 <button key={f} style={{ ...s.filterBtn, ...(filter === f ? s.filterActive : {}) }} onClick={() => setFilter(f)}>
                   {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -365,9 +407,22 @@ export default function AdminPanel() {
                   </td>
                   <td style={s.td}><span style={{ color: '#64748b', fontSize: 13 }}>{u.email}</span></td>
                   <td style={s.td}>
-                    <span style={{ ...s.badge, color: u.is_active ? '#4ade80' : '#f87171', background: u.is_active ? 'rgba(74,222,128,0.08)' : 'rgba(248,113,113,0.08)', borderColor: u.is_active ? '#4ade8033' : '#f8717133' }}>
-                      ● {u.is_active ? 'Active' : 'Inactive'}
-                    </span>
+                    {(() => {
+                      const status = getActivityStatus(u);
+                      let color = '#94a3b8', bg = 'rgba(148,163,184,0.08)', border = '#94a3b833';
+                      
+                      if (status === 'Disabled') {
+                          color = '#f87171'; bg = 'rgba(248,113,113,0.08)'; border = '#f8717133';
+                      } else if (status === 'Online') {
+                          color = '#4ade80'; bg = 'rgba(74,222,128,0.08)'; border = '#4ade8033';
+                      }
+                      
+                      return (
+                        <span style={{ ...s.badge, color, background: bg, borderColor: border }}>
+                          ● {status}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={s.td}>
                     <span style={{ ...s.badge, color: u.is_superuser ? '#fbbf24' : '#64748b', background: u.is_superuser ? 'rgba(251,191,36,0.08)' : 'rgba(100,116,139,0.08)', borderColor: u.is_superuser ? '#fbbf2433' : '#64748b33' }}>
@@ -441,9 +496,9 @@ export default function AdminPanel() {
                   {/* Basic Info */}
                   <div style={{ background: '#0f172a', padding: 16, borderRadius: 8 }}>
                     <h4 style={{ margin: '0 0 12px', color: '#94a3b8' }}>Profile</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: '#e2e8f0' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: '#e2e8f0' }} className="user-details-grid">
                       <div><span style={{ color: '#475569' }}>Email:</span> {userDetails.user.email}</div>
-                      <div><span style={{ color: '#475569' }}>Created:</span> {new Date(userDetails.user.created_at).toLocaleString()}</div>
+                      <div><span style={{ color: '#475569' }}>Created:</span> {formatDate(userDetails.user.created_at)}</div>
                       <div><span style={{ color: '#475569' }}>Role:</span> {userDetails.user.is_superuser ? 'Admin' : 'Client'}</div>
                       <div><span style={{ color: '#475569' }}>Status:</span> {userDetails.user.is_active ? 'Active' : 'Inactive'}</div>
                     </div>
@@ -458,7 +513,7 @@ export default function AdminPanel() {
                           <div key={scan.id} style={{ background: '#020617', padding: '10px 14px', borderRadius: 6, border: '1px solid #1e293b', fontSize: 12 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                               <strong style={{ color: '#38bdf8' }}>{scan.scan_type}</strong>
-                              <span style={{ color: '#64748b' }}>{new Date(scan.created_at).toLocaleString()}</span>
+                              <span style={{ color: '#64748b' }}>{formatDate(scan.created_at)}</span>
                             </div>
                             <div style={{ color: '#e2e8f0' }}>Target: {scan.target}</div>
                           </div>
@@ -476,7 +531,7 @@ export default function AdminPanel() {
                         {userDetails.otps.slice(0, 5).map((otp: any) => (
                           <div key={otp.id} style={{ background: '#020617', padding: '10px 14px', borderRadius: 6, border: '1px solid #1e293b', fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
                             <strong style={{ color: '#4ade80' }}>{otp.purpose}</strong>
-                            <span style={{ color: '#64748b' }}>{new Date(otp.created_at).toLocaleString()}</span>
+                            <span style={{ color: '#64748b' }}>{formatDate(otp.created_at)}</span>
                           </div>
                         ))}
                       </div>
@@ -779,7 +834,7 @@ function InsightsView({ data }: { data: any }) {
       </div>
 
       {/* Scan Types + Top Scanners */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="admin-insights-grid">
 
         {/* Scan Types Breakdown */}
         <div>
@@ -838,7 +893,7 @@ function InsightsView({ data }: { data: any }) {
       </div>
 
       {/* OTP Breakdown + Email Domains */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="admin-insights-grid">
 
         {/* OTP by Purpose */}
         <div>
@@ -878,7 +933,7 @@ function InsightsView({ data }: { data: any }) {
       </div>
 
       <p style={{ color: '#1e293b', fontSize: 11, textAlign: 'right' }}>
-        Generated at {new Date(data.generated_at).toLocaleString()}
+        Generated at {formatDate(data.generated_at)}
       </p>
 
       {/* ── Detailed Logs Modal ── */}
@@ -906,7 +961,7 @@ function InsightsView({ data }: { data: any }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                         <strong style={{ color: '#38bdf8', fontSize: 13 }}>{scan.scan_type}</strong>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ color: '#64748b', fontSize: 11 }}>{new Date(scan.created_at).toLocaleString()}</span>
+                          <span style={{ color: '#64748b', fontSize: 11 }}>{formatDate(scan.created_at)}</span>
                           <span style={{ color: '#94a3b8', fontSize: 10 }}>{expandedScanId === scan.id ? '▲' : '▼'}</span>
                         </div>
                       </div>
@@ -934,6 +989,7 @@ function InsightsView({ data }: { data: any }) {
                         <div>
                           <strong style={{ color: '#f8fafc', fontSize: 14 }}>{u.username}</strong>
                           <div style={{ color: '#94a3b8', fontSize: 12 }}>{u.email}</div>
+                          {u.last_active && <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Last Active: {formatDate(u.last_active)}</div>}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                           <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: 10, fontWeight: 700, color: u.is_active ? '#4ade80' : '#f87171', background: u.is_active ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)' }}>
@@ -951,7 +1007,7 @@ function InsightsView({ data }: { data: any }) {
                     <div key={otp.id} style={{ background: '#0f172a', padding: 14, borderRadius: 8, border: '1px solid #1e293b' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                         <strong style={{ color: '#4ade80', fontSize: 13 }}>{otp.purpose}</strong>
-                        <span style={{ color: '#64748b', fontSize: 11 }}>{new Date(otp.created_at).toLocaleString()}</span>
+                        <span style={{ color: '#64748b', fontSize: 11 }}>{formatDate(otp.created_at)}</span>
                       </div>
                       <div style={{ color: '#94a3b8', fontSize: 12 }}>
                         Sent to: <strong style={{ color: '#cbd5e1' }}>{otp.email}</strong>
