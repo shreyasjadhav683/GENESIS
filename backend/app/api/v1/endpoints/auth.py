@@ -105,6 +105,19 @@ def get_current_user_data(
     """Get current authenticated user's data"""
     return current_user
 
+@router.post("/logout")
+def logout_user(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(deps.get_current_user)
+) -> Any:
+    """Record logout time for the current user."""
+    current_user.last_logout = datetime.utcnow()
+    # Optionally push their last_active backward so they appear offline instantly
+    current_user.last_active = datetime.utcnow() - timedelta(minutes=15)
+    session.add(current_user)
+    session.commit()
+    return {"message": "Successfully logged out"}
+
 @router.post("/register", response_model=UserRead)
 def register_user(
     *,

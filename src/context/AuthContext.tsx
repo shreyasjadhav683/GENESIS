@@ -14,7 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (token: string, userData?: any) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (userData: any) => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -62,7 +62,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await fetchUserData();
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      console.error("Logout API failed", e);
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

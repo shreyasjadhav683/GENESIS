@@ -18,6 +18,7 @@ interface UserRecord {
   is_superuser: boolean;
   security_question: string;
   last_active?: string;
+  last_logout?: string;
 }
 
 
@@ -27,7 +28,7 @@ const getActivityStatus = (u: UserRecord): 'Online' | 'Offline' | 'Disabled' => 
   if (u.last_active) {
     const lastStr = u.last_active.endsWith('Z') ? u.last_active : u.last_active + 'Z';
     const lastTime = new Date(lastStr).getTime();
-    if (new Date().getTime() - lastTime < 15 * 60 * 1000) return 'Online';
+    if (new Date().getTime() - lastTime < 3 * 60 * 1000) return 'Online';
   }
   return 'Offline';
 };
@@ -97,7 +98,14 @@ export default function AdminPanel() {
     }
   }, [navigate]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { 
+    fetchAll(); 
+    // Poll every 10 seconds for real-time updates
+    const interval = setInterval(() => {
+      fetchAll();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
 
   /* ── Actions ── */
   const toggleActive = async (u: UserRecord) => {
@@ -317,9 +325,9 @@ export default function AdminPanel() {
         {(activeTab === 'clients' || activeTab === 'admins') && (
           <div style={s.statsRow} className="admin-stats">
             {[
-              { label: 'Total Users',   val: users.length,    color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',   icon: '👥' },
-              { label: 'Active',        val: users.filter(u => getActivityStatus(u) === 'Online').length,   color: '#4ade80', bg: 'rgba(74,222,128,0.08)',   icon: '🟢' },
-              { label: 'Inactive',      val: users.filter(u => getActivityStatus(u) !== 'Online').length, color: '#f87171', bg: 'rgba(248,113,113,0.08)', icon: '🔴' },
+              { label: 'Total Clients',   val: users.filter(u => !u.is_superuser).length,    color: '#60a5fa', bg: 'rgba(96,165,250,0.08)',   icon: '👥' },
+              { label: 'Active',        val: users.filter(u => !u.is_superuser && getActivityStatus(u) === 'Online').length,   color: '#4ade80', bg: 'rgba(74,222,128,0.08)',   icon: '🟢' },
+              { label: 'Inactive',      val: users.filter(u => !u.is_superuser && getActivityStatus(u) !== 'Online').length, color: '#f87171', bg: 'rgba(248,113,113,0.08)', icon: '🔴' },
               { label: 'Administrators',val: users.filter(u => u.is_superuser).length,    color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  icon: '🛡️' },
             ].map(st => (
               <div key={st.label} style={{ ...s.statCard, background: st.bg, borderColor: `${st.color}22` }}>
@@ -397,9 +405,16 @@ export default function AdminPanel() {
                           color = '#4ade80'; bg = 'rgba(74,222,128,0.08)'; border = '#4ade8033';
                       }
                       
+                      let label = status as string;
+                      if (status === 'Offline' && u.last_logout) {
+                          const lt = new Date(u.last_logout);
+                          const formattedTime = lt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                          label = `Offline (Left at ${formattedTime})`;
+                      }
+
                       return (
                         <span style={{ ...s.badge, color, background: bg, borderColor: border }}>
-                          ● {status}
+                          ● {label}
                         </span>
                       );
                     })()}
@@ -480,7 +495,19 @@ export default function AdminPanel() {
                       <div><span style={{ color: '#475569' }}>Email:</span> {userDetails.user.email}</div>
                       <div><span style={{ color: '#475569' }}>Created:</span> {formatDate(userDetails.user.created_at)}</div>
                       <div><span style={{ color: '#475569' }}>Role:</span> {userDetails.user.is_superuser ? 'Admin' : 'Client'}</div>
-                      <div><span style={{ color: '#475569' }}>Status:</span> {userDetails.user.is_active ? 'Active' : 'Inactive'}</div>
+                      <div><span style={{ color: '#475569' }}>Last Logout:</span> {userDetails.user.last_logout ? formatDate(userDetails.user.last_logout) : 'Never'}</div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <span style={{ color: '#475569' }}>Status: </span> 
+                        {(() => {
+                          const st = getActivityStatus(userDetails.user);
+                          let label = st as string;
+                          if (st === 'Offline' && userDetails.user.last_logout) {
+                              const lt = new Date(userDetails.user.last_logout);
+                              label = `Offline (Left at ${lt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+                          }
+                          return <strong style={{ color: st === 'Online' ? '#4ade80' : st === 'Disabled' ? '#f87171' : '#94a3b8' }}>{label}</strong>;
+                        })()}
+                      </div>
                     </div>
                   </div>
 

@@ -182,7 +182,8 @@ def list_users(
             "is_active": u.is_active,
             "is_superuser": u.is_superuser,
             "security_question": u.security_question,
-            "last_active": u.last_active or u.created_at
+            "last_active": (u.last_active or u.created_at).isoformat() + "Z",
+            "last_logout": u.last_logout.isoformat() + "Z" if u.last_logout else None
         }
         for u in users
     ]
@@ -244,6 +245,8 @@ def read_user_details(
             "is_active": user.is_active,
             "is_superuser": user.is_superuser,
             "created_at": getattr(user, "created_at", None),
+            "last_active": (user.last_active or user.created_at).isoformat() + "Z",
+            "last_logout": user.last_logout.isoformat() + "Z" if user.last_logout else None,
         },
         "scans": [
             {

@@ -17,6 +17,7 @@ class User(UserBase, table=True):
     recovery_code_expires_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     last_active: Optional[datetime] = Field(default=None)
+    last_logout: Optional[datetime] = Field(default=None)
 
 class UserCreate(UserBase):
     password: str
