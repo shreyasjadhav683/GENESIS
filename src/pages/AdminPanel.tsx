@@ -59,7 +59,6 @@ export default function AdminPanel() {
   });
 
   const [users, setUsers]         = useState<UserRecord[]>([]);
-  const [stats, setStats]         = useState<Stats | null>(null);
   const [insights, setInsights]   = useState<any | null>(null);
   const [loading, setLoading]     = useState(true);
   const [actioning, setActioning] = useState<number | null>(null);
@@ -85,13 +84,11 @@ export default function AdminPanel() {
   /* ── Fetch data ── */
   const fetchAll = useCallback(async () => {
     try {
-      const [u, s, ins] = await Promise.all([
+      const [u, ins] = await Promise.all([
         adminApi.get('/admin/users'),
-        adminApi.get('/admin/stats'),
         adminApi.get('/admin/insights'),
       ]);
       setUsers(u.data);
-      setStats(s.data);
       setInsights(ins.data);
     } catch (e: any) {
       if (e.response?.status === 401 || e.response?.status === 403) {
@@ -113,11 +110,6 @@ export default function AdminPanel() {
     try {
       await adminApi.patch(`/admin/users/${u.id}/toggle-active`);
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_active: !x.is_active } : x));
-      setStats(prev => prev ? {
-        ...prev,
-        active_users: u.is_active ? prev.active_users - 1 : prev.active_users + 1,
-        inactive_users: u.is_active ? prev.inactive_users + 1 : prev.inactive_users - 1,
-      } : prev);
       toast$(`${u.username} ${u.is_active ? 'disabled' : 'enabled'}`);
     } catch (e: any) { toast$(e.response?.data?.detail || 'Failed', false); }
     finally { setActioning(null); }
@@ -139,13 +131,6 @@ export default function AdminPanel() {
     try {
       await adminApi.delete(`/admin/users/${u.id}`);
       setUsers(prev => prev.filter(x => x.id !== u.id));
-      setStats(prev => prev ? {
-        ...prev,
-        total_users: prev.total_users - 1,
-        active_users: u.is_active ? prev.active_users - 1 : prev.active_users,
-        inactive_users: !u.is_active ? prev.inactive_users - 1 : prev.inactive_users,
-        admin_users: u.is_superuser ? prev.admin_users - 1 : prev.admin_users,
-      } : prev);
       toast$(`"${u.username}" deleted`);
     } catch (e: any) { toast$(e.response?.data?.detail || 'Delete failed', false); }
     finally { setActioning(null); }
