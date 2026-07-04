@@ -87,6 +87,10 @@ def login_verify(
     if datetime.utcnow() > otp_record.expires_at:
          raise HTTPException(status_code=400, detail="OTP expired")
 
+    user.last_active = datetime.utcnow()
+    session.add(user)
+    session.commit()
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(

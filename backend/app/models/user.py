@@ -15,6 +15,8 @@ class User(UserBase, table=True):
     security_answer_hash: str = Field(default="")
     recovery_code_hash: Optional[str] = Field(default=None)
     recovery_code_expires_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_active: Optional[datetime] = Field(default=None)
 
 class UserCreate(UserBase):
     password: str

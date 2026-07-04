@@ -34,4 +34,14 @@ def get_current_user(
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+        
+    # Update last_active timestamp if > 5 minutes to avoid excessive DB writes
+    from datetime import datetime
+    now = datetime.utcnow()
+    if not user.last_active or (now - user.last_active).total_seconds() > 300:
+        user.last_active = now
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        
     return user

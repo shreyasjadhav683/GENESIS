@@ -172,16 +172,8 @@ def list_users(
     _admin: User = Depends(require_superuser),
 ) -> Any:
     """Return all registered users with safe fields (no password hashes)."""
-    from app.models.scan_history import ScanHistory
     users = session.exec(select(User)).all()
-    scans = session.exec(select(ScanHistory)).all()
     
-    user_latest = {}
-    for s in scans:
-        if s.user_id:
-            if s.user_id not in user_latest or (s.created_at and s.created_at > user_latest[s.user_id]):
-                user_latest[s.user_id] = s.created_at
-
     return [
         {
             "id": u.id,
@@ -190,7 +182,7 @@ def list_users(
             "is_active": u.is_active,
             "is_superuser": u.is_superuser,
             "security_question": u.security_question,
-            "last_active": user_latest.get(u.id, getattr(u, "created_at", None))
+            "last_active": u.last_active or u.created_at
         }
         for u in users
     ]
